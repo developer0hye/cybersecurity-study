@@ -10,16 +10,16 @@
 
 | ID | Risk | Classic analogue | Studied |
 |---|---|---|---|
-| LLM01 | Prompt Injection | SQL injection / XSS (data becomes code) | ⬜ |
+| LLM01 | Prompt Injection | [SQL injection](../cs50-cybersecurity/notes/03-securing-software.md#sql-injection) / [XSS](../cs50-cybersecurity/notes/03-securing-software.md#code-injection-and-cross-site-scripting-xss) (data becomes code) | ⬜ |
 | LLM02 | Sensitive Information Disclosure | data leakage, DLP | ⬜ |
-| LLM03 | Supply Chain | malicious packages, typosquatting | ⬜ |
+| LLM03 | Supply Chain | [malicious packages, typosquatting](../cs50-cybersecurity/notes/03-securing-software.md#package-managers) | ⬜ |
 | LLM04 | Data and Model Poisoning | integrity attacks, backdoors | ⬜ |
-| LLM05 | Improper Output Handling | missing output encoding → XSS/SQLi/command injection | ⬜ |
+| LLM05 | Improper Output Handling | missing [output encoding](../cs50-cybersecurity/notes/03-securing-software.md#defense-1-character-escapes) → XSS/SQLi/[command injection](../cs50-cybersecurity/notes/03-securing-software.md#command-injection) | ⬜ |
 | LLM06 | Excessive Agency | violating least privilege | ⬜ |
-| LLM07 | System Prompt Leakage | secrets in client-side code | ⬜ |
+| LLM07 | System Prompt Leakage | [secrets in client-side code](../cs50-cybersecurity/notes/03-securing-software.md#developer-tools-and-client-side-validation) | ⬜ |
 | LLM08 | Vector and Embedding Weaknesses | broken access control, data poisoning | ⬜ |
 | LLM09 | Misinformation | integrity; over-trusting unverified output | ⬜ |
-| LLM10 | Unbounded Consumption | DoS, "denial of wallet" | ⬜ |
+| LLM10 | Unbounded Consumption | [DoS](../cs50-cybersecurity/notes/02-securing-systems.md#denial-of-service-dos-and-ddos), "denial of wallet" | ⬜ |
 
 ## Checklist
 
@@ -49,7 +49,7 @@
 - [ ] OWASP Agentic Top 10: ASI01 Agent Goal Hijack → ASI10 Rogue Agents (read all ten)
 
 ### Output handling & availability
-- [ ] LLM output flowing into HTML, SQL, shell, or `eval` (Improper Output Handling = CS50 L3 again)
+- [ ] LLM output flowing into HTML, SQL, shell, or `eval` (Improper Output Handling = [CS50 L3](../cs50-cybersecurity/notes/03-securing-software.md#code-injection-and-cross-site-scripting-xss) again; compare with [`04_sql_injection.py`](../cs50-cybersecurity/demos/04_sql_injection.py), [`05_xss_escaping.py`](../cs50-cybersecurity/demos/05_xss_escaping.py), [`06_command_injection.py`](../cs50-cybersecurity/demos/06_command_injection.py))
 - [ ] Sandboxing code-executing agents (containers, no network, resource limits)
 - [ ] Rate limits, token budgets, cost alerts
 

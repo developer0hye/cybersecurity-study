@@ -252,7 +252,7 @@ This is where things are heading, and it avoids the "forgot the primary password
 - A passkey is **a pair of mathematically related values**: a **private** one that stays on your device and a **public** one that the site stores.
 - On later visits, your device uses them to **authenticate you automatically**, usually after a fingerprint or face check.
 - Passkeys are **synced across your devices**.
-- Understanding them needs cryptography, which comes in [Lecture 1](01-securing-data.md#passkeys-webauthn--fido2).
+- Understanding them needs cryptography, which comes in [Lecture 1](01-securing-data.md#11-passkeys-webauthn).
 
 ## Summary
 

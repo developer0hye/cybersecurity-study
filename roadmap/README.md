@@ -48,19 +48,19 @@ flowchart LR
 
 ## Crosswalk: classic security ↔ AI-era equivalent
 
-This is the core idea of the plan. Many "new" AI threats are old security ideas in a new place.
+This is the core idea of the plan. Many "new" AI threats are old security ideas in a new place. Links in the left column go to my [CS50 notes](../cs50-cybersecurity/) on the classic version.
 
 | Classic security concept | AI-era equivalent | Where |
 |---|---|---|
-| SQL injection / XSS: data treated as code | **Prompt injection**: untrusted text treated as instructions | Phase 3 |
-| Stored XSS: payload saved and served later | **Indirect prompt injection** via web pages, emails, RAG documents | Phase 3 |
+| [SQL injection](../cs50-cybersecurity/notes/03-securing-software.md#sql-injection) / [XSS](../cs50-cybersecurity/notes/03-securing-software.md#code-injection-and-cross-site-scripting-xss): data treated as code | **Prompt injection**: untrusted text treated as instructions | Phase 3 |
+| [Stored XSS](../cs50-cybersecurity/notes/03-securing-software.md#stored-attack): payload saved and served later | **Indirect prompt injection** via web pages, emails, RAG documents | Phase 3 |
 | Least privilege, authorization | **Excessive agency**: agents holding too many tools or permissions | Phase 3 |
-| Supply-chain attacks (typosquatting, malicious packages) | Malicious **models, pickled weights, MCP servers, plugins** | Phase 3 |
-| Output encoding / server-side validation | **Improper output handling**: LLM output passed to a shell, SQL, or HTML | Phase 3 |
+| Supply-chain attacks (typosquatting, [malicious packages](../cs50-cybersecurity/notes/03-securing-software.md#package-managers)) | Malicious **models, pickled weights, MCP servers, plugins** | Phase 3 |
+| [Output encoding](../cs50-cybersecurity/notes/03-securing-software.md#defense-1-character-escapes) / [server-side validation](../cs50-cybersecurity/notes/03-securing-software.md#developer-tools-and-client-side-validation) | **Improper output handling**: LLM output passed to a shell, SQL, or HTML | Phase 3 |
 | Data leakage / DLP | **Sensitive info disclosure**, system prompt leakage, training-data extraction | Phase 3 |
-| DoS / DDoS | **Unbounded consumption** ("denial of wallet") | Phase 3 |
-| Phishing & social engineering | **LLM-written spear phishing**, voice clones, deepfake video calls | Phase 4 |
-| Credential attacks | AI-assisted password guessing and CAPTCHA solving → phishing-resistant MFA / passkeys | Phase 4 |
+| [DoS / DDoS](../cs50-cybersecurity/notes/02-securing-systems.md#denial-of-service-dos-and-ddos) | **Unbounded consumption** ("denial of wallet") | Phase 3 |
+| [Phishing](../cs50-cybersecurity/notes/00-securing-accounts.md#10-phishing) & [social engineering](../cs50-cybersecurity/notes/00-securing-accounts.md#9-social-engineering) | **LLM-written spear phishing**, voice clones, deepfake video calls | Phase 4 |
+| [Credential attacks](../cs50-cybersecurity/notes/00-securing-accounts.md#2-attacks-on-passwords) | AI-assisted password guessing and CAPTCHA solving → phishing-resistant MFA / passkeys | Phase 4 |
 | Vulnerability research, pentesting | AI-assisted recon, fuzzing, and exploit development (and defense) | Phase 4 |
 | SOC / SIEM / incident response | LLM-assisted triage and detection, and monitoring the AI systems themselves | Phase 5 |
 | Pentesting / red teaming | **AI red teaming**: jailbreak and injection testing, evals | Phase 5 |

@@ -9,11 +9,11 @@
 ## Checklist
 
 ### Social engineering at scale
-- [ ] LLM-written phishing and spear phishing: fluent, personalized, and in any language (spelling mistakes no longer give it away)
+- [ ] LLM-written phishing and spear phishing: fluent, personalized, and in any language (spelling mistakes no longer give it away). Classic version: [CS50 L0 phishing](../cs50-cybersecurity/notes/00-securing-accounts.md#10-phishing), [phishing with HTML](../cs50-cybersecurity/notes/03-securing-software.md#phishing-with-html)
 - [ ] OSINT automation: building target profiles from public data
 - [ ] Voice cloning (vishing) and fake "family emergency" or "CEO" calls
 - [ ] Deepfake video meetings. Case study: the 2024 Hong Kong incident where an Arup employee transferred about US$25M after a video call with deepfaked colleagues
-- [ ] Defenses: out-of-band verification (call back on a known number), payment approval workflows, code words, passkeys / FIDO2 (phishing-resistant), user training that doesn't rely on "spot the typo"
+- [ ] Defenses: out-of-band verification (call back on a known number), payment approval workflows, code words, passkeys / FIDO2 (phishing-resistant, see [CS50 L0](../cs50-cybersecurity/notes/00-securing-accounts.md#passkeys) and [L1](../cs50-cybersecurity/notes/01-securing-data.md#11-passkeys-webauthn)), user training that doesn't rely on "spot the typo"
 
 ### Offensive automation
 - [ ] AI-assisted reconnaissance and vulnerability scanning

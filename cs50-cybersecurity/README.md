@@ -9,6 +9,17 @@ These notes follow the [official lecture notes](https://cs50.harvard.edu/cyberse
 - **Runnable Python demos** you can run and change
 - **Review questions** with hidden answers at the end of each lecture
 
+## Where this fits
+
+This is the first course in my [AI × Security study roadmap](../roadmap/). It covers most of the core concepts, cryptography, and web attacks in [Phase 1: Security foundations](../roadmap/01-security-foundations.md). Those classic attacks come back in the AI-era phases:
+
+- SQL injection, XSS, and command injection (L3) → prompt injection and improper output handling in [Phase 3](../roadmap/03-attacks-on-ai-systems.md)
+- Phishing, social engineering, and passkeys (L0, L1) → AI-written phishing and deepfake fraud in [Phase 4](../roadmap/04-attacks-powered-by-ai.md)
+
+The [crosswalk table](../roadmap/README.md#crosswalk-classic-security--ai-era-equivalent) pairs each classic concept with its AI-era equivalent.
+
+Networking fundamentals continue in [Professor Messer's Network+](../comptia-network-plus/).
+
 ## Contents
 
 | # | Lecture | Topics |
