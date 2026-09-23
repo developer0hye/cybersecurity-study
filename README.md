@@ -25,6 +25,7 @@ To understand these threats well, I think you need both **AI engineering** knowl
 |---|---|
 | [`roadmap/`](roadmap/) | My AI × Security study plan, built from the [AI Engineer](https://roadmap.sh/ai-engineer) and [Cyber Security](https://roadmap.sh/cyber-security) roadmaps, with progress checklists |
 | [`cs50-cybersecurity/`](cs50-cybersecurity/) | Detailed notes, review questions, and Python demos for [Harvard CS50's Introduction to Cybersecurity (2023)](https://cs50.harvard.edu/cybersecurity/) |
+| [`comptia-network-plus/`](comptia-network-plus/) | 🟡 In progress: notes by exam domain for [Professor Messer's CompTIA Network+ N10-009 course](https://www.youtube.com/watch?v=k7IOn3TiUc8&list=PLG49S3nxzAnl_tQe3kvnmeMid0mjF8Le8) (free on YouTube) |
 
 More folders will be added as I work through other courses, books, and papers.
 

@@ -21,6 +21,9 @@
 - [ ] Hands-on: inspect a real certificate chain with `openssl s_client`
 
 ### Networking
+
+> Main resource for this section: [Professor Messer's Network+ N10-009](../comptia-network-plus/)
+
 - [ ] OSI / TCP-IP models, IP addressing, subnetting, NAT
 - [ ] Core protocols: DNS, DHCP, HTTP(S), SSH, ARP
 - [x] Ports, firewalls, VPN, proxies, DPI → [CS50 L2](../cs50-cybersecurity/notes/02-securing-systems.md)
@@ -54,3 +57,4 @@
 ## Notes & resources I used
 
 - ✅ [CS50's Introduction to Cybersecurity](../cs50-cybersecurity/)
+- 🟡 [Professor Messer's CompTIA Network+ N10-009](../comptia-network-plus/): networking fundamentals

@@ -28,7 +28,7 @@ roadmap.sh's content is copyrighted, and its license allows sharing **links** bu
 
 | Phase | Focus | Mainly draws on | Status |
 |---|---|---|---|
-| 1 | [Security foundations](01-security-foundations.md) | 🛡️ Cyber Security | 🟡 in progress (CS50 done) |
+| 1 | [Security foundations](01-security-foundations.md) | 🛡️ Cyber Security | 🟡 in progress (CS50 done, Network+ next) |
 | 2 | [AI engineering foundations](02-ai-engineering-foundations.md) | 🤖 AI Engineer | ⬜ not started |
 | 3 | [Attacks on AI systems](03-attacks-on-ai-systems.md) | 🤖 + 🛡️ | ⬜ not started |
 | 4 | [Attacks powered by AI](04-attacks-powered-by-ai.md) | 🛡️ + 🤖 | ⬜ not started |
