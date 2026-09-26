@@ -17,7 +17,7 @@ This connects two parts of my [AI × Security roadmap](../roadmap/): evaluation 
 |---|---|---|
 | 01 | [Knowledge benchmark methodology](01-knowledge-benchmarks.md) | closed-book vs. agentic, benchmark selection (saturation, authorship confound, contamination), the WMDP-cyber cut, pre-registered protocol, non-answers vs. wrong answers, McNemar + Bonferroni + sensitivity check, majority baseline, test-retest noise, reasoning as a ranking confound, the empty-content infrastructure failure |
 | 02 | [Agentic evaluation methodology](02-agentic-evaluation.md) | agentic vs. knowledge evals, why measure offensive capability, harness and budget effects, solve rate / Wilson CI / McNemar power at n=39, sandbox isolation and network policy, layered logs, infrastructure vs. model failure, re-run fairness, timeouts and slow models |
-| 03 | [Agent architecture basics](03-agent-architecture.md) | ReAct loop, tool definitions and calls, system prompt, submission and retries, termination conditions, context management, reasoning tokens vs. turns (Inspect's ReAct agent as the example) |
+| 03 | [Agent architecture basics](03-agent-architecture.md) | ReAct loop, tool definitions and calls, system prompt, submission and retries, termination conditions, context management, reasoning tokens vs. turns, the Inspect framework and what the report borrowed vs. wrote (Inspect's ReAct agent as the example) |
 
 Each note ends with **"Questions you'll be asked (and how to answer)"**, with the answers folded.
 

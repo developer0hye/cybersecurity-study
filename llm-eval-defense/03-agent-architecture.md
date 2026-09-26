@@ -10,6 +10,7 @@ General concepts behind a tool-using LLM agent, the kind of loop my [agentic eva
 - The **system prompt** sets the role, the environment and how to finish. In Inspect it is assembled from task instructions + a generic assistant prompt + a submit instruction.
 - The agent finishes by calling a **`submit` tool**. The harness scores the answer and, if attempts remain, tells the model it was wrong and continues.
 - **Stop conditions** are mostly *outside* the model's control: a correct answer, attempts exhausted, cost/time limits, a context-window overflow, or repeated content-filter stops.
+- **The loop is not hand-written.** The report runs the agent on [Inspect](https://inspect.aisi.org.uk/) (`inspect_ai`, UK AI Security Institute, MIT) and the benchmark's ready-made task from `inspect_evals`. The report's own code only configures and runs it.
 - **The context grows every turn.** Every tool output and every assistant turn is re-sent on the next call, so cost per turn rises over a trajectory. Reasoning tokens make each turn more expensive and slower, but can mean fewer turns.
 
 ## 1. The ReAct loop
@@ -119,7 +120,7 @@ What does **not** end it: a turn with no tool call. When a `submit` tool exists,
 **The context is the whole trajectory.** Each call re-sends the system prompt, the task, every previous assistant turn and every tool output. So:
 
 - **Input tokens grow each turn**, and cost per turn rises over a trajectory. Prompt caching (cheaper cached-input prices, registered per model in the report's `run_cybench.py`) offsets part of this.
-- **One verbose tool output** (a large file dump, a long log) stays in the context for every later turn.
+- **One verbose tool output** (a large file dump, a long log) stays in the context for every later turn (Inspect caps a single tool output at 16 KiB by default, §8.5).
 - **Context overflow is a stop condition.** Inspect's `react()` offers `compaction` (summarise or trim old turns) and `truncation="auto"`. The Cybench task uses neither, so its default is `truncation="disabled"`, and when the model returns `model_length` the transcript records *"Agent terminated: model context window exceeded"* and the sample ends.
 - **Harnesses differ here, and it matters for comparisons.** The original Cybench agent kept only *"the last three iterations of responses and observations"* in its prompt, with a 6,000-token input limit and a 15-iteration cap ([arXiv:2408.08926](https://arxiv.org/abs/2408.08926)). 2607.15263 used Inspect's ReAct agent *"with auto-compaction"*, triggered *"when the agent context reached 90% of the model context window"*. The `inspect_evals` Cybench default used by my report has no compaction, which is a disclosed deviation from that paper.
 
@@ -133,9 +134,152 @@ What does **not** end it: a turn with no tool call. When a `submit` tool exists,
 
 So "reasoning on vs off" in an agent is not only a quality setting. It changes cost per turn, time per turn and the number of turns needed, all at once. That is why the report fixes it explicitly for every model instead of leaving the provider default.
 
+## 7. The framework: Inspect, and what the report wrote itself
+
+**Inspect** (`inspect_ai`) is an open-source LLM evaluation framework. Its package metadata describes it as a *"Framework for large language model evaluations"*, authored by the UK AI Security Institute, MIT-licensed ([docs](https://inspect.aisi.org.uk/), [source](https://github.com/UKGovernmentBEIS/inspect_ai)).
+
+An Inspect evaluation is a **`Task`** built from three parts:
+
+| Part | Job | In the report |
+|---|---|---|
+| **Dataset** | the items: input, target, and optionally a sandbox spec | Cybench's 39 challenges |
+| **Solver / agent** | how the model works on an item: one call, or a tool-using loop | `react()` with `bash`, `python`, `submit` |
+| **Scorer** | how the output is graded | `includes()`: correct if the answer contains the flag |
+
+`inspect_eval(task, model=...)` runs it. The framework also provides:
+
+- **Model providers** behind one interface (OpenAI, Anthropic, OpenRouter, …), so the same task runs unchanged across models.
+- **Agent machinery:** the ReAct loop, submission attempts, compaction (§§1–6).
+- **Sandboxes:** tool calls execute inside Docker or Kubernetes containers. Kubernetes support is the separate `inspect-k8s-sandbox` package.
+- **Limits:** caps on cost, tokens, messages, working time and wall-clock time, plus API retries and timeouts.
+- **Logs:** one `.eval` file per run with every model call, tool call and output, cost and provider per sample, in order. `inspect view` opens them in a browser.
+
+**`inspect_evals`** is a separate MIT-licensed *"Collection of large language model evaluations"* implemented on Inspect. Cybench is one of them. Inspect is the engine; `inspect_evals` is a set of ready-made benchmarks for it.
+
+**Borrowed vs. written, in the report** (versions pinned in [`agentic/requirements.txt`](https://github.com/developer0hye/budget-llm-cybersecurity-eval/blob/gpt6-luna-and-agentic/agentic/requirements.txt)):
+
+| Borrowed, unmodified | Written by the report |
+|---|---|
+| `inspect_ai==0.3.268`: model calls, `react()` loop, limits, logging | [`run_cybench.py`](https://github.com/developer0hye/budget-llm-cybersecurity-eval/blob/gpt6-luna-and-agentic/agentic/run_cybench.py): a driver that registers model prices and context lengths (so `cost_limit` can fire), pins providers, turns reasoning on, builds the egress allowlist, sets limits and timeouts, and calls `inspect_eval()` |
+| `inspect_evals@2329ee2` `cybench()`: challenges, system prompt, tools, 3 submissions, scorer | `analyze_cybench.py`: tallies results from the logs |
+| `inspect-k8s-sandbox==0.13.0`: compose → Helm, Cilium domain allowlist | `audit_egress.py`, `collect_netlog.py`: network audit |
+
+The driver does not change the agent's behaviour. The one code patch is a workaround in `run_cybench.py` for a helm-version parsing bug in `inspect-k8s-sandbox`. So "the report's agent" is precisely the default ReAct agent inside `inspect_evals`' Cybench task.
+
+**Why this helps when defending the method:**
+
+- **Reproducible by anyone.** Installing the pinned versions gives the same agent, prompt, tools and scorer.
+- **Not tuned to any model.** The agent was not written or adjusted by the report, so it cannot have been fitted to one model.
+- **Same framework as the anchor.** [arXiv:2607.15263](https://arxiv.org/abs/2607.15263) §3: *"We use the Inspect evaluation framework"*, with *"the Cybench hard variant from Inspect Evals"*.
+- **The logs make post-hoc checks possible**: recomputing results under lower cost caps, auditing egress, and checking whether compaction would have mattered all come from the `.eval` files.
+
+## 8. Inside Inspect's `react()`: how the loop is implemented
+
+"ReAct" is the pattern from the paper (§1). `react()` is Inspect's implementation of it: one Python function in `inspect_ai/agent/_react.py` that returns an agent. Everything below was read from the installed `inspect_ai==0.3.268` source, so it describes this version only.
+
+### 8.1 Who owns what
+
+```
+inspect_eval()                 ← our run_cybench.py calls this, with model, limits, sandbox
+  └─ Task  (from inspect_evals cybench())
+       ├─ dataset   39 challenges, each with its own sandbox spec
+       ├─ solver    react(prompt, tools, attempts, on_continue)   ← the agent loop
+       └─ scorer    includes()
+```
+
+`cybench()` only fills in arguments. The loop logic is all in `react()`. Limits such as `cost_limit` belong to `inspect_eval()` and are enforced by the runtime, not by `react()`.
+
+### 8.2 The arguments: defaults vs. what Cybench passes
+
+| `react()` argument | Default | Cybench (`inspect_evals@2329ee2`) | Effect |
+|---|---|---|---|
+| `prompt` | `AgentPrompt()`: generic assistant + submit prompts | a CTF-player instruction string (§3) | combined with the default assistant and submit prompts into one system message |
+| `tools` | none | `bash(timeout=180)`, `python(timeout=180)` | run inside the sandbox |
+| `submit` | `True` | not set, so `True` | a `submit(answer: str)` tool is appended automatically |
+| `attempts` | `1` | `AgentAttempts(attempts=3, incorrect_message=…)` | up to 3 submissions, with feedback after a wrong one |
+| `on_continue` | a default "proceed… or call submit()" message | *"Please proceed to the next step using your best judgement."* | sent when a turn has no tool call |
+| `retry_refusals` | `None` | not set | a refusal or `content_filter` output is not re-generated |
+| `compaction` | `None` | not set | no compaction (see §6) |
+| `truncation` | `"disabled"` | not set | context overflow ends the sample |
+| `approval`, `review` | `None` | not set | no human or policy approval step on tool calls |
+
+### 8.3 One iteration of the loop
+
+Simplified from `execute()` in `_react.py`:
+
+```python
+messages.insert(0, system_message)            # once, at start
+while True:
+    output = model.generate(messages, tools)   # one model call ("turn")
+    messages.append(output.message)
+
+    if output.stop_reason == "model_length":   # context window full
+        if compaction or truncation: shrink messages; continue
+        else: break                             # "Agent terminated: model context window exceeded"
+
+    if output.stop_reason == "content_filter": # provider filtered the reply
+        if 3 in a row: break
+
+    if output.message.tool_calls:
+        results = execute_tools(messages, tools)   # runs bash/python in the sandbox
+        messages.extend(results)                   # tool outputs (or errors) become messages
+        if submit was called:
+            attempt_count += 1
+            if attempt_count >= 3: break            # out of attempts: final scoring happens later
+            if score(state) is correct: break       # scored inside the loop
+            messages.append(user(incorrect_message))
+    else:
+        messages.append(user(on_continue))          # no tool call: nudge, don't stop
+```
+
+Points worth knowing:
+
+- **Every turn re-sends the whole `messages` list.** Nothing is dropped unless compaction or truncation is configured, which is why cost per turn grows (§6).
+- **Tool calls in one turn are executed by `execute_tools()`**, which can run several calls from the same assistant message concurrently.
+- **Tool errors don't crash the loop.** `execute_tools()` returns a failing command's output or error as a tool message, and the model sees it on the next turn.
+- **The in-loop check uses the task's scorer.** For Cybench that is `includes()`, a case-insensitive substring match against the flag (`ignore_case=True`), the same rule 2607.15263 describes (*"case-insensitive substring match"*).
+- **What gets scored.** With the default `AgentSubmit` (`answer_only=False`), the sample's final completion is the model's last message text followed by the submitted answer.
+- **Silence is not an exit.** A turn without a tool call gets the `on_continue` message, not a stop.
+- **At the end,** `submit` calls are removed from the message history (`keep_in_messages=False`), and the final `state` goes to the task scorer.
+
+### 8.4 How a sample can end
+
+| Ending | Where it's decided | Scored as |
+|---|---|---|
+| Correct submission | `react()` loop, in-loop `score()` | correct |
+| 3rd submission used | `react()` loop | the task scorer grades the final state |
+| Context window full (no compaction/truncation) | `react()` loop | the task scorer grades the final state |
+| 3 consecutive `content_filter` replies | `react()` loop | the task scorer grades the final state |
+| `cost_limit`, `working_limit`, `time_limit` exceeded | Inspect runtime raises `LimitExceededError` | the sample is scored on its most recent state, and the limit type is recorded in the log (`EvalSampleLimit`) |
+| Unrecoverable error (after retries) | Inspect runtime | a sample error, not a score (`fail_on_error=False` keeps the run going) |
+
+The limit row matters for interpretation. A cost-capped sample is not "crashed". It is scored on what it had when the cap hit, and the log records which limit fired. That is how the report can count cost-cap hits separately (see [02 §3](02-agentic-evaluation.md#3-the-harness-and-the-budget-are-part-of-the-result)).
+
+### 8.5 What `react()` deliberately does not do
+
+- **No turn/round cap of its own.** Unlike harnesses with `max_rounds`, `react()` loops until a submission, an attempt limit or a runtime limit. Budgets come from `inspect_eval()` (cost, time, messages, tokens).
+- **No planning, memory or multi-agent structure** unless added: no planner/executor split, no scratchpad file, no sub-agents. It is a single model in a single loop. The Cybench paper's scaffold comparison ([02 §3](02-agentic-evaluation.md#3-the-harness-and-the-budget-are-part-of-the-result)) shows that such scaffold choices move scores, which is why the report uses the unmodified default.
+- **Tool-output truncation is not the agent's job, but it does happen.** `react()` passes tool results through, but Inspect's tool executor (`truncate_tool_output()` in `inspect_ai/model/_call_tools.py`) cuts any single tool output above `max_tool_output`. That defaults to 16 KiB when unset, as in the report. The model then sees *"The output of your call to {tool_name} was too long to be displayed. Here is a truncated version:"*. So one huge command output costs at most about 16 KiB of context per call.
+
+### 8.6 How `react()` differs from the original ReAct paper
+
+`react()` is a ReAct implementation by its own description. Its docstring opens: *"Extensible ReAct agent based on the paper ReAct: Synergizing Reasoning and Acting in Language Models"*. Its default assistant prompt asks for the reasoning step explicitly: *"Do some reasoning before your actions, describing what tool calls you are going to use and how they fit into your plan."* But it is a modern, tool-calling version of the pattern, not a reproduction of the 2022 setup:
+
+| | ReAct paper (arXiv:2210.03629) | Inspect `react()` |
+|---|---|---|
+| Thought | a text "Thought", defined as a language action that does not affect the environment: *"we augment the agent's action space to Â = A ∪ L, where L is the space of language"* | ordinary assistant text before a tool call, and/or hidden reasoning tokens from reasoning models |
+| Action | text such as `Act: …`, parsed from the model's output by the harness | structured `tool_calls` from the provider API; no text parsing |
+| Observation | `Obs: …` text appended to the prompt | a `tool`-role message |
+| How the model is steered | few-shot: *"prompted with only one or two in-context examples"* | zero-shot: system prompt plus tool definitions, no worked examples |
+| Finishing | a task-specific finish action | the `submit` tool, attempt limits and runtime limits |
+| Extras | none | submission retries with feedback, continue messages, optional compaction/truncation, refusal retries, approval policies |
+
+This is why 2607.15263 calls its setup *"a ReAct-style agent"*. The precise claim for the report is: **the standard Inspect agent that implements the ReAct pattern with native tool calling, used unmodified as configured by `inspect_evals`' Cybench task**. It is not a replication of the ReAct paper's prompting method.
+
 ## Sources
 
 - Yao et al., *ReAct: Synergizing Reasoning and Acting in Language Models*, [arXiv:2210.03629](https://arxiv.org/abs/2210.03629)
+- Inspect: [docs home](https://inspect.aisi.org.uk/) · [source](https://github.com/UKGovernmentBEIS/inspect_ai) · [`inspect_evals`](https://github.com/UKGovernmentBEIS/inspect_evals)
 - Inspect docs: [Agents](https://inspect.aisi.org.uk/agents.html) · [ReAct agent](https://inspect.aisi.org.uk/react-agent.html) · [Compaction](https://inspect.aisi.org.uk/compaction.html)
 - Zhang et al., *Cybench*, [arXiv:2408.08926](https://arxiv.org/abs/2408.08926)
 - Kassianik, Nelson, Singer, [arXiv:2607.15263](https://arxiv.org/abs/2607.15263), §3
@@ -176,4 +320,19 @@ In an agent it changes three things at once: output tokens (cost) per turn, late
 <details><summary>7. What's the difference between the 3 submission attempts and 3 epochs?</summary>
 
 Attempts are inside one trajectory: the model gets "incorrect" feedback and keeps its context. Epochs are independent trajectories from scratch. Attempts are part of one pass@1 sample. Epochs measure run-to-run variance.
+</details>
+
+<details><summary>8. Did you write your own agent framework?</summary>
+
+No. The agent loop, tools, scorer, limits and logging come from Inspect (`inspect_ai`, UK AI Security Institute, MIT) and the Cybench task in `inspect_evals`, at pinned versions. The report's code is a driver (model price registration, provider pinning, egress allowlist, limits) plus analysis and audit scripts. It does not change the agent's behaviour, so anyone can reproduce the agent by installing the same versions, and it cannot have been tuned to a particular model. The anchor paper, arXiv:2607.15263, used the same framework and task.
+</details>
+
+<details><summary>9. What exactly is "react" here: the paper or the code?</summary>
+
+Both, at two levels. ReAct is the pattern from Yao et al. (arXiv:2210.03629): interleave reasoning with actions and observations. `react()` is Inspect's implementation of that pattern, a function in `inspect_ai/agent/_react.py`. `inspect_evals`' Cybench task calls it with a CTF system prompt, `bash` and `python` tools (180 s timeouts) and 3 submission attempts. The loop logic (turns, tool execution, submission handling, continue messages, overflow handling) is all in `react()`. The report neither wrote nor changed it. It is ReAct-*style*, not a replication of the paper: actions are native tool calls instead of parsed `Act:` text, and there are no few-shot examples (§8.6).
+</details>
+
+<details><summary>10. If the cost cap hits mid-task, is that a crash or a failure?</summary>
+
+Neither, strictly. Inspect raises `LimitExceededError`, scores the sample on its most recent state, and records the limit type in the log. So the sample is scored normally (almost always as not solved), and the report can count cost-cap hits separately from wrong answers.
 </details>
