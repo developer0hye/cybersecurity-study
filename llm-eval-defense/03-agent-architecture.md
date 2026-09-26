@@ -14,7 +14,7 @@ General concepts behind a tool-using LLM agent, the kind of loop my [agentic eva
 
 ## 1. The ReAct loop
 
-ReAct ([Yao et al., arXiv:2210.03629](https://arxiv.org/abs/2210.03629), cited in Inspect's `react()` docstring) interleaves reasoning traces with actions, so the model plans from what it just observed instead of producing one answer up front.
+ReAct ([Yao et al., arXiv:2210.03629](https://arxiv.org/abs/2210.03629), cited in Inspect's `react()` docstring) interleaves reasoning traces with actions, so the model plans from what it just observed instead of producing one answer up front. The paper's headline result: on ALFWorld and WebShop, ReAct *"outperforms imitation and reinforcement learning methods by an absolute success rate of 34% and 10% respectively, while being prompted with only one or two in-context examples."*
 
 ```
             ┌──────────────────────────────────────────────┐
@@ -66,7 +66,7 @@ tools=[bash(timeout=180), python(timeout=180)]   # + submit, appended by react()
 Two design points that matter for evaluation:
 
 - **Tool errors are observations, not crashes.** A command that fails returns its error text to the model, which can react to it. Recovering from errors is part of what an agent eval measures.
-- **Tools can run in parallel.** Inspect's default assistant prompt says: *"Prioritize parallel tool calls: when operations are independent, run them in one response."* How much work a model packs into one turn affects every turn-limited budget (see the legacy round-budget result in [02 §3](02-agentic-evaluation.md#3-the-harness-and-the-budget-are-part-of-the-result)).
+- **Tools can run in parallel.** Inspect's default assistant prompt says: *"Prioritize parallel tool calls: when operations are independent, run them in one response."* How much work a model packs into one turn affects every turn- or message-limited budget (see [02 §3](02-agentic-evaluation.md#3-the-harness-and-the-budget-are-part-of-the-result)).
 
 ## 3. The system prompt
 
@@ -120,15 +120,16 @@ What does **not** end it: a turn with no tool call. When a `submit` tool exists,
 
 - **Input tokens grow each turn**, and cost per turn rises over a trajectory. Prompt caching (cheaper cached-input prices, registered per model in the report's `run_cybench.py`) offsets part of this.
 - **One verbose tool output** (a large file dump, a long log) stays in the context for every later turn.
-- **Context overflow is a stop condition.** Inspect's `react()` offers `compaction` (summarise or trim old turns) and `truncation="auto"`. The Cybench task uses neither, so its default is `truncation="disabled"`, and when the model returns `model_length` the transcript records *"Agent terminated: model context window exceeded"* and the sample ends. The 5 models in the report have context windows of 524k–1.05M tokens (registered in `run_cybench.py`), so this limit is rarely the binding one in practice.
+- **Context overflow is a stop condition.** Inspect's `react()` offers `compaction` (summarise or trim old turns) and `truncation="auto"`. The Cybench task uses neither, so its default is `truncation="disabled"`, and when the model returns `model_length` the transcript records *"Agent terminated: model context window exceeded"* and the sample ends.
+- **Harnesses differ here, and it matters for comparisons.** The original Cybench agent kept only *"the last three iterations of responses and observations"* in its prompt, with a 6,000-token input limit and a 15-iteration cap ([arXiv:2408.08926](https://arxiv.org/abs/2408.08926)). 2607.15263 used Inspect's ReAct agent *"with auto-compaction"*, triggered *"when the agent context reached 90% of the model context window"*. The `inspect_evals` Cybench default used by my report has no compaction, which is a disclosed deviation from that paper.
 
 **Reasoning tokens and turns.** With reasoning enabled, the model generates hidden reasoning before its visible reply and tool calls.
 
 - They are **billed as output tokens**, usually the most expensive kind, so they draw down a cost cap faster per turn.
 - They make each turn **take longer** at a given output speed, which is where per-call time caps can bite (see [02 §8](02-agentic-evaluation.md#8-timeouts-can-penalise-slow-models)).
-- They can mean **fewer, better turns**: more planning per step, fewer wasted actions. In the legacy CTF study, turning reasoning on improved solve rates for 3 of 4 testable models (p < 0.0001 each) ([legacy README](https://github.com/developer0hye/budget-llm-cybersecurity-eval/blob/main/legacy/ctftiny/README.md#key-findings)).
+- They can mean **fewer, better turns**: more planning per step, fewer wasted actions. ReAct's own motivation is that reasoning traces help the model *"induce, track, and update action plans"* (arXiv:2210.03629).
 - Whether earlier reasoning is sent back to the model on later turns depends on the provider API and the harness's model adapter, not on the agent loop itself.
-- Reasoning can fail to terminate. On the report's knowledge axis, some models hit the 16,000-token cap while oscillating or enumerating ([README, Non-answers](https://github.com/developer0hye/budget-llm-cybersecurity-eval#non-answers-are-not-wrong-answers)). In an agent, the same behaviour burns budget inside one turn.
+- Reasoning can fail to terminate within the output-token limit. In an agent, that burns budget inside one turn without producing an action. The Cybench paper had to raise o1-preview's output limit to 32,768 tokens *"because it often returned an empty response with a limit of 2000"*.
 
 So "reasoning on vs off" in an agent is not only a quality setting. It changes cost per turn, time per turn and the number of turns needed, all at once. That is why the report fixes it explicitly for every model instead of leaving the provider default.
 
@@ -136,6 +137,8 @@ So "reasoning on vs off" in an agent is not only a quality setting. It changes c
 
 - Yao et al., *ReAct: Synergizing Reasoning and Acting in Language Models*, [arXiv:2210.03629](https://arxiv.org/abs/2210.03629)
 - Inspect docs: [Agents](https://inspect.aisi.org.uk/agents.html) · [ReAct agent](https://inspect.aisi.org.uk/react-agent.html) · [Compaction](https://inspect.aisi.org.uk/compaction.html)
+- Zhang et al., *Cybench*, [arXiv:2408.08926](https://arxiv.org/abs/2408.08926)
+- Kassianik, Nelson, Singer, [arXiv:2607.15263](https://arxiv.org/abs/2607.15263), §3
 - [`inspect_evals/cybench/cybench.py`](https://github.com/UKGovernmentBEIS/inspect_evals/blob/2329ee2bb2e688672bf34dc4c1b1907ed08aaf3a/src/inspect_evals/cybench/cybench.py) at `2329ee2`
 
 ## Questions you'll be asked (and how to answer)
@@ -152,7 +155,7 @@ No. The model only emits a structured tool call. The harness executes it inside 
 
 <details><summary>3. Why did you use the default agent and prompt instead of a better one?</summary>
 
-Comparability. The default `inspect_evals` ReAct agent and system prompt are what the anchor paper used, and they are the same for every model. A custom scaffold could raise all scores, but then the comparison would partly measure the scaffold and could no longer be anchored to published numbers.
+Comparability. 2607.15263 ran the same `inspect_evals` Cybench hard variant with a ReAct-style agent in Inspect, the same three tools and up to 3 submissions, and this setup is identical for every model. A custom scaffold could raise scores, but the Cybench paper shows scaffold alone moved GPT-4o from 10.0% to 17.5%, so the comparison would partly measure the scaffold and could no longer be anchored to published numbers. Known differences from 2607.15263: it enabled auto-compaction (§6), and it does not state its system prompt, so the harness default is used here.
 </details>
 
 <details><summary>4. How does the agent know when to stop?</summary>
@@ -162,12 +165,12 @@ It calls `submit`. If the answer is wrong and attempts remain, it is told so and
 
 <details><summary>5. What happens when the context window fills up?</summary>
 
-In the Cybench configuration (no compaction, truncation disabled) the sample ends with "model context window exceeded". Inspect supports compaction and automatic truncation, but the task doesn't enable them. With 524k+ token windows, cost and time limits usually bind first.
+In the Cybench configuration (no compaction, truncation disabled) the sample ends with "model context window exceeded". Inspect supports compaction and automatic truncation, but the task doesn't enable them. 2607.15263 enabled auto-compaction at 90% of the window. Compaction does nothing below that threshold, so the fair check is whether any sample got that full. In the report's runs none did, so the difference is disclosed rather than re-run.
 </details>
 
 <details><summary>6. Isn't reasoning just "better answers"? Why treat it as a confound?</summary>
 
-In an agent it changes three things at once: output tokens (cost) per turn, latency per turn, and the number of turns needed. Under a fixed cost or time budget those effects can offset each other or compound. Leaving it at provider defaults would mix models reasoning with models not reasoning. The legacy CTF study found exactly that confound, which is why reasoning is now set explicitly.
+In an agent it changes three things at once: output tokens (cost) per turn, latency per turn, and the number of turns needed. Under a fixed cost or time budget those effects can offset each other or compound. Leaving it at provider defaults would mix models reasoning with models not reasoning, which is why it is set explicitly for every model.
 </details>
 
 <details><summary>7. What's the difference between the 3 submission attempts and 3 epochs?</summary>

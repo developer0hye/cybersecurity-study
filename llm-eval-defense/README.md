@@ -5,7 +5,7 @@ Study notes for explaining and defending the methodology of my own benchmark rep
 When someone asks "why did you measure it that way?", I want to be able to answer from the design, the data and the code, not from memory. These notes are for that.
 
 - **Scope: methodology only.** How the evaluation is designed, what the numbers mean, and where they could mislead. No attack techniques, exploit steps or challenge solutions.
-- **Numbers come from the report.** Every figure links to the report's committed README or to a cited paper. Results the report has not published yet are not quoted.
+- **Numbers come from the original papers and technical reports** (Cybench, WMDP, CTIBench, CyberMetric, and the cited evaluation-methodology papers), each linked where it is used. My own report's results are not quoted here; the notes explain the method and point to the report's code.
 
 ## Where this fits
 
