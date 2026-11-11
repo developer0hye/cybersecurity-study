@@ -27,6 +27,7 @@ To understand these threats well, I think you need both **AI engineering** knowl
 | [`cs50-cybersecurity/`](cs50-cybersecurity/) | Detailed notes, review questions, and Python demos for [Harvard CS50's Introduction to Cybersecurity (2023)](https://cs50.harvard.edu/cybersecurity/) |
 | [`comptia-network-plus/`](comptia-network-plus/) | 🟡 In progress: notes by exam domain for [Professor Messer's CompTIA Network+ N10-009 course](https://www.youtube.com/watch?v=k7IOn3TiUc8&list=PLG49S3nxzAnl_tQe3kvnmeMid0mjF8Le8) (free on YouTube) |
 | [`llm-eval-defense/`](llm-eval-defense/) | 🟡 In progress: notes for explaining and defending the methodology of my benchmark report [budget-llm-cybersecurity-eval](https://github.com/developer0hye/budget-llm-cybersecurity-eval) (knowledge benchmarks, agentic evaluation design, agent architecture) |
+| [`cyber-llm-datasets/`](cyber-llm-datasets/) | A survey of public **training** datasets for cybersecurity LLMs (knowledge + agentic), tiered by license into commercial / research-only / off-limits, with eval-contamination and coverage notes |
 
 More folders will be added as I work through other courses, books, and papers.
 
